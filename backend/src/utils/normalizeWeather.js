@@ -9,8 +9,11 @@ const normalizeWeather = (payload, fallbackName) => {
     description: payload.weather?.[0]?.description ?? 'Unknown',
     icon: payload.weather?.[0]?.icon ?? '',
     locationName: fallbackName || payload.name,
-    country: payload.sys?.country ?? ''
+    country: payload.sys?.country ?? '',
+    lat: payload.coord.lat,
+    lon: payload.coord.lon
   };
+  
 };
 
 module.exports = { normalizeWeather };

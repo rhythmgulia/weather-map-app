@@ -44,8 +44,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const addFavourite = async (fav) => {
+    const data = await apiClient.post('/favourites', fav);
+    setUser(prev => ({ ...prev, favourites: data.favourites }));
+  };
+  
+  const removeFavourite = async (fav) => {
+    const data = await apiClient.delete('/favourites', { data: fav });
+    setUser(prev => ({ ...prev, favourites: data.favourites }));
+  };
+  
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, signup, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, error, login, signup, logout, refreshUser, addFavourite, removeFavourite }}>
       {children}
     </AuthContext.Provider>
   );

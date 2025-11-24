@@ -39,6 +39,16 @@ const Dashboard = () => {
       setSearching(false);
     }
   };
+  
+  const isFavourite = user?.favourites?.some(
+    f => f.lat === weather.data.lat && f.lon === weather.data.lon
+  );
+  
+  const toggleFavourite = (fav) => {
+    if (isFavourite) removeFavourite(fav);
+    else addFavourite(fav);
+  };
+  
 
   return (
     <div className="dashboard">
@@ -74,6 +84,20 @@ const Dashboard = () => {
           <WeatherCard weather={weather} />
         </div>
       </section>
+
+      <section className="favourites">
+  <h3>Favourites</h3>
+  {user?.favourites?.map(f => (
+    <button
+      key={`${f.lat}-${f.lon}`}
+      onClick={() => updateCoordinates({ lat: f.lat, lon: f.lon }, f.locationName)}
+      className="fav-location"
+    >
+      {f.locationName}
+    </button>
+  ))}
+</section>
+
     </div>
   );
 };
