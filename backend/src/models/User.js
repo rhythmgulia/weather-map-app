@@ -17,7 +17,15 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true
-    }
+    },
+    favourites: [
+      {
+        lat: Number,
+        lon: Number,
+        locationName: String,
+        country: String
+      }
+    ],    
   },
   { timestamps: true }
 );
