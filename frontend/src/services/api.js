@@ -38,5 +38,22 @@ export const apiClient = {
       body: JSON.stringify(body)
     });
     return handleResponse(response);
+  },
+  delete: async (path, body) => {
+    const res = await fetch(API_BASE + path, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body?.data || body)
+    });
+  
+    if (!res.ok) {
+      const msg = `Error ${res.status}`;
+      throw new Error(msg);
+    }
+  
+    return res.json();
   }
 };

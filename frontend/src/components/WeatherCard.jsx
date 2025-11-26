@@ -28,7 +28,7 @@ const WeatherCard = ({ weather }) => {
 
   // ⭐ Check if this location is already in favourites
   const isFavourite = user?.favourites?.some(
-    (f) => f.lat === lat && f.lon === lon
+    (f) => f?.lat === lat && f?.lon === lon
   );
 
   // ⭐ Add/remove favourite
@@ -40,8 +40,11 @@ const WeatherCard = ({ weather }) => {
       country
     };
 
-    if (isFavourite) removeFavourite(fav);
-    else addFavourite(fav);
+    if (isFavourite) {
+      removeFavourite(fav);
+    } else {
+      addFavourite(fav);
+    }
   };
 
   return (
@@ -85,4 +88,5 @@ const WeatherCard = ({ weather }) => {
 };
 
 export default WeatherCard;
+
 

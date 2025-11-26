@@ -25,7 +25,16 @@ const userSchema = new mongoose.Schema(
         locationName: String,
         country: String
       }
-    ],    
+    ],  
+    recentSearches: [
+      {
+        locationName: String,
+        lat: Number,
+        lon: Number,
+        country: String,
+        searchedAt: { type: Date, default: Date.now }
+      }
+    ]  
   },
   { timestamps: true }
 );

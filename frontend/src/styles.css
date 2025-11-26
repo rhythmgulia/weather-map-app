@@ -226,3 +226,27 @@ button.ghost {
     min-height: 320px;
   }
 }
+
+.autocomplete-list {
+  position: absolute;
+  background: white;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  margin-top: 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.autocomplete-item {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.autocomplete-item:hover {
+  background: #f2f2f2;
+}
+

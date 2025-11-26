@@ -8,10 +8,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Load logged-in user
   const refreshUser = async () => {
     try {
       setLoading(true);
+  
+      // Your apiClient.get() returns data, NOT axios response
       const data = await apiClient.get('/auth/me');
+  
       setUser(data.user);
       setError(null);
     } catch (err) {
@@ -25,6 +29,7 @@ export const AuthProvider = ({ children }) => {
     refreshUser();
   }, []);
 
+  // Signup / Login helper
   const authAction = async (path, payload) => {
     setError(null);
     try {
@@ -44,19 +49,63 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Add favourite
   const addFavourite = async (fav) => {
-    const data = await apiClient.post('/favourites', fav);
-    setUser(prev => ({ ...prev, favourites: data.favourites }));
+    const res = await apiClient.post('/favourites', fav);
+    setUser(prev => ({ ...prev, favourites: res.data.favourites }));
   };
-  
+
+  // Remove favourite
   const removeFavourite = async (fav) => {
-    const data = await apiClient.delete('/favourites', { data: fav });
-    setUser(prev => ({ ...prev, favourites: data.favourites }));
+    const res = await apiClient.delete('/favourites', { data: fav });
+    setUser(prev => ({ ...prev, favourites: res.data.favourites }));
   };
-  
+
+  // Add recent search
+  const addRecentSearch = async (search) => {
+    try {
+      const res = await apiClient.post('/recent', search);
+
+      const recent = res?.data?.recent ?? []; // SAFE
+
+      setUser(prev => ({
+        ...prev,
+        recentSearches: recent
+      }));
+    } catch (err) {
+      console.error("Failed to save recent search:", err);
+    }
+  };
+
+  // Refresh recent search list
+  const refreshRecent = async () => {
+    try {
+      const res = await apiClient.get('/recent');
+      setUser(prev => ({
+        ...prev,
+        recentSearches: res.data.recent
+      }));
+    } catch (err) {
+      console.error("Failed to fetch recent searches:", err);
+    }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, signup, logout, refreshUser, addFavourite, removeFavourite }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        error,
+        login,
+        signup,
+        logout,
+        refreshUser,
+        addFavourite,
+        removeFavourite,
+        addRecentSearch,
+        refreshRecent
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -69,3 +118,4 @@ export const useAuth = () => {
   }
   return ctx;
 };
+

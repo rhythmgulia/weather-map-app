@@ -8,6 +8,7 @@ const { connectDB } = require('./config/db');
 const authRoutes = require('./routes/auth');
 const weatherRoutes = require('./routes/weather');
 const favouriteRoutes = require('./routes/favourites');
+const recentRoutes = require('./routes/recent');
 
 
 const PORT = process.env.PORT || 5005;
@@ -32,6 +33,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/favourites', favouriteRoutes);
+app.use('/api/recent', recentRoutes);
 
 const start = async () => {
   await connectDB();
