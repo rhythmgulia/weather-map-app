@@ -52,21 +52,23 @@ export const AuthProvider = ({ children }) => {
   // Add favourite
   const addFavourite = async (fav) => {
     const res = await apiClient.post('/favourites', fav);
-    setUser(prev => ({ ...prev, favourites: res.data.favourites }));
+    setUser(prev => ({ ...prev, favourites: res.favourites }));
   };
+  
 
   // Remove favourite
   const removeFavourite = async (fav) => {
     const res = await apiClient.delete('/favourites', { data: fav });
-    setUser(prev => ({ ...prev, favourites: res.data.favourites }));
+    setUser(prev => ({ ...prev, favourites: res.favourites }));
   };
+  
 
   // Add recent search
   const addRecentSearch = async (search) => {
     try {
       const res = await apiClient.post('/recent', search);
 
-      const recent = res?.data?.recent ?? []; // SAFE
+      const recent = res?.recent ?? []; // SAFE
 
       setUser(prev => ({
         ...prev,
@@ -83,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       const res = await apiClient.get('/recent');
       setUser(prev => ({
         ...prev,
-        recentSearches: res.data.recent
+        recentSearches: res.recent
       }));
     } catch (err) {
       console.error("Failed to fetch recent searches:", err);

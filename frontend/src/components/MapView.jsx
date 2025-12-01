@@ -14,7 +14,7 @@ const MapView = ({ center, onSelectLocation }) => {
 
     mapInstance.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: "mapbox://styles/mapbox/dark-v11",
       center: [center.lon, center.lat],
       zoom: 8
     });
@@ -40,7 +40,7 @@ const MapView = ({ center, onSelectLocation }) => {
     return <div className="map-placeholder">Add VITE_MAPBOX_TOKEN to view the map.</div>;
   }
 
-  return <div className="map" ref={mapContainer} />;
+  return <div className="map-container"><div className="map" ref={mapContainer} /></div>;
 };
 
 export default MapView;

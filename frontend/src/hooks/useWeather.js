@@ -18,10 +18,15 @@ export const useWeather = () => {
           lon: coords.lon,
           locationName: locationLabel
         });
+        
+        // Debugging: Log the received data
+        console.log('Received weather data from API:', data);
+        
         if (!cancelled) {
           setWeather({ isLoading: false, error: null, data });
         }
       } catch (err) {
+        console.error('Error fetching weather:', err);
         if (!cancelled) {
           setWeather({ isLoading: false, data: null, error: err.message || 'Unable to fetch weather' });
         }

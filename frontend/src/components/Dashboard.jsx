@@ -1,243 +1,239 @@
-import { useState, useEffect } from 'react';
-import MapView from './MapView';
-import WeatherCard from './WeatherCard';
-import ErrorBanner from './ErrorBanner';
-import { useAuth } from '../context/AuthContext';
-import { useWeather } from '../hooks/useWeather';
+import { useState } from "react";
+
+import MapView from "./MapView";
+import WeatherCard from "./WeatherCard";
+import ErrorBanner from "./ErrorBanner";
+import { useAuth } from "../context/AuthContext";
+import { useWeather } from "../hooks/useWeather";
+
+let typingTimer;
 
 const Dashboard = () => {
   const { user, logout, addRecentSearch } = useAuth();
   const { coords, weather, updateCoordinates } = useWeather();
-  const [searchTerm, setSearchTerm] = useState('');
+
+  const [searchTerm, setSearchTerm] = useState("");
   const [searching, setSearching] = useState(false);
   const [mapError, setMapError] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const [isTyping, setIsTyping] = useState(false);
-
+  const [showRecents, setShowRecents] = useState(false);
 
   const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-  // const handleSearch = async (evt) => {
-  //   evt.preventDefault();
-  //   if (!searchTerm.trim()) return;
-  //   if (!mapboxToken) {
-  //     setMapError('Mapbox token missing');
-  //     return;
-  //   }
-  //   setSearching(true);
-  //   setMapError(null);
-  //   try {
-  //     const response = await fetch(
-  //       `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchTerm)}.json?access_token=${mapboxToken}`
-  //     );
-  //     const payload = await response.json();
-  //     if (!payload.features?.length) {
-  //       throw new Error('No results found');
-  //     }
-  //     const [lon, lat] = payload.features[0].center;
-  //     updateCoordinates({ lat, lon }, payload.features[0].place_name);
-
-  //     addRecentSearch({
-  //       lat,
-  //       lon,
-  //       locationName: payload.features[0].place_name,
-  //       country: payload.features[0].context?.find(c => c.id.startsWith("country"))?.text || ""
-  //     });
-  //   } catch (err) {
-  //     setMapError(err.message || 'Unable to find that location');
-  //   } finally {
-  //     setSearching(false);
-  //   }
-  // };
-
-  const handleSearch = async (evt) => {
-    evt.preventDefault();
-    if (!searchTerm.trim()) return;
-    if (!mapboxToken) {
-      setMapError('Mapbox token missing');
-      return;
-    }
-  
-    setSearching(true);
-    setMapError(null);
-  
+  // Reverse Geocode (coords → place name)
+  const reverseGeocode = async (lat, lon) => {
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchTerm)}.json?access_token=${mapboxToken}`
-      );
-      const payload = await response.json();
-      if (!payload.features?.length) {
-        throw new Error('No results found');
-      }
-  
-      const [lon, lat] = payload.features[0].center;
-      const placeName = payload.features[0].place_name;
-      const country =
-        payload.features[0].context?.find((c) => c.id?.startsWith('country'))?.text || '';
-  
-      // update map + weather
-      updateCoordinates({ lat, lon }, placeName);
-  
-      // save recent search (safe call, won't block UI)
-      try {
-        await addRecentSearch({ lat, lon, locationName: placeName, country });
-      } catch (err) {
-        // keep UX smooth; optionally setMapError(err.message)
-        console.error('Failed to save recent search', err);
-      }
-    } catch (err) {
-      setMapError(err.message || 'Unable to find that location');
-    } finally {
-      setSearching(false);
-    }
-  };
-  
-  
-  const isFav = user?.favourites?.some(
-    (f) => f?.lat === coords.lat && f?.lon === coords.lon
-  );
-  
-  
-  const toggleFavourite = (fav) => {
-    if (isFavourite) removeFavourite(fav);
-    else addFavourite(fav);
-  };
-
-  let typingTimer;
-  const fetchSuggestions = async (text) => {
-    if (!text.trim()) {
-      setSuggestions([]);
-      return;
-    }
-
-    try {
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(text)}.json?autocomplete=true&limit=5&access_token=${mapboxToken}`;
-
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lon},${lat}.json?access_token=${mapboxToken}`;
       const res = await fetch(url);
       const data = await res.json();
 
+      if (data.features?.length > 0) {
+        return data.features[0].place_name;
+      }
+      return `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    } catch (_) {
+      return `Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+    }
+  };
+
+  // Autocomplete search suggestions
+  const fetchSuggestions = async (query) => {
+    if (!query.trim()) return setSuggestions([]);
+
+    try {
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+        query
+      )}.json?autocomplete=true&limit=5&access_token=${mapboxToken}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
       setSuggestions(data.features || []);
     } catch (err) {
       console.error("Autocomplete error:", err);
     }
   };
 
-  useEffect(() => {
-    const close = () => setIsTyping(false);
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, []);
-  
+  // Submit search
+  const handleSearch = async (evt) => {
+    evt.preventDefault();
+    if (!searchTerm.trim()) return;
 
-  
+    setSearching(true);
+    setMapError(null);
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          searchTerm
+        )}.json?access_token=${mapboxToken}`
+      );
+
+      const data = await response.json();
+      if (!data.features?.length) throw new Error("No results found");
+
+      const [lon, lat] = data.features[0].center;
+      const placeName = data.features[0].place_name;
+
+      updateCoordinates({ lat, lon }, placeName);
+
+      addRecentSearch({
+        lat,
+        lon,
+        locationName: placeName,
+      });
+
+      setSuggestions([]);
+    } catch (err) {
+      setMapError(err.message || "Unable to find that location");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Map click handler
+  const handleMapClick = async (coords) => {
+    const name = await reverseGeocode(coords.lat, coords.lon);
+    updateCoordinates(coords, name);
+
+    addRecentSearch({
+      lat: coords.lat,
+      lon: coords.lon,
+      locationName: name,
+    });
+  };
 
   return (
-    <div className="dashboard">
-      <header className="dashboard__header">
-        <div>
-          <p className="eyebrow">Logged in as</p>
-          <h2>{user?.name ?? user?.email}</h2>
+    <div className="dashboard-layout">
+      {/* ============================
+          LEFT SIDEBAR
+      ============================ */}
+      <aside className="sidebar">
+
+        {/* User Info */}
+        <div className="sidebar-user">
+          <h3>{user?.name}</h3>
+          <p className="sidebar-email">{user?.email}</p>
         </div>
-        <button onClick={logout} className="ghost">
+
+        {/* Favourites */}
+        <div className="sidebar-section">
+          <h4>Favourites</h4>
+          <div className="sidebar-list">
+            {user?.favourites?.length ? (
+              user.favourites.map((f, i) => (
+                <button
+                  key={i}
+                  className="sidebar-item"
+                  onClick={() =>
+                    updateCoordinates({ lat: f.lat, lon: f.lon }, f.locationName)
+                  }
+                >
+                  {f.locationName}
+                </button>
+              ))
+            ) : (
+              <p className="empty-text">No favourites yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Recent Searches */}
+        <div className="sidebar-section">
+          <button
+            className="sidebar-toggle"
+            onClick={() => setShowRecents(!showRecents)}
+          >
+            {showRecents ? "Hide Recent Searches" : "Recent Searches"}
+          </button>
+
+          {showRecents && (
+            <div className="sidebar-list">
+              {user?.recentSearches?.length ? (
+                user.recentSearches.map((r, i) => (
+                  <button
+                    key={i}
+                    className="sidebar-item"
+                    onClick={() =>
+                      updateCoordinates({ lat: r.lat, lon: r.lon }, r.locationName)
+                    }
+                  >
+                    {r.locationName}
+                  </button>
+                ))
+              ) : (
+                <p className="empty-text">No recent searches</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Logout */}
+        <button className="sidebar-logout" onClick={logout}>
           Logout
         </button>
-      </header>
+      </aside>
 
-      <section className="dashboard__controls">
-        <form onSubmit={handleSearch} className="search-form">
-        <input
-        value={searchTerm}
-        onChange={(e) => {
-        const value = e.target.value;
-        setSearchTerm(value);
-        setIsTyping(true);
+      {/* ============================
+          MAP + WEATHER
+      ============================ */}
+      <div className="map-wrapper">
+        <MapView center={coords} onSelectLocation={handleMapClick} />
 
-        clearTimeout(typingTimer);
-        typingTimer = setTimeout(() => fetchSuggestions(value), 300); // 300ms debounce
-        }}
-        placeholder="Search by city or place"
-        />
-        <button type="submit" disabled={searching}>
-          {searching ? 'Searching…' : 'Go'}
-        </button>
-        </form>
-        {isTyping && suggestions.length > 0 && (
-          <ul className="autocomplete-list">
-            {suggestions.map((item) => (
-            <li
-            key={item.id}
-            onClick={() => {
-              const [lon, lat] = item.center;
-
-              updateCoordinates({ lat, lon }, item.place_name);
-
-              // add to recent searches
-              addRecentSearch({
-                lat,
-                lon,
-                locationName: item.place_name,
-                country:
-                  item.context?.find((c) => c.id.startsWith('country'))?.text || ''
-              });
-
-              setSearchTerm(item.place_name);
-              setSuggestions([]);
-              setIsTyping(false);
-            }}
-            className="autocomplete-item"
-          >
-          {item.place_name}
-          </li>
-        ))}
-        </ul>
-)}
-
-
-        {(mapError || weather.error) && <ErrorBanner message={mapError || weather.error} />}
-
-      </section>
-
-      <section className="recent-searches">
-        <h3>Recent Searches</h3>
-        {user?.recentSearches?.length === 0 && <p>No recent searches.</p>}
-        <ul>
-          {user?.recentSearches?.map((s, idx) => (
-            <li key={idx}>
-            <button
-              className="recent-btn"
-              onClick={() => updateCoordinates({ lat: s.lat, lon: s.lon }, s.locationName)}
-            >
-            {s.locationName}
-            </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="dashboard__content">
-        <div className="map-panel">
-          <MapView center={coords} onSelectLocation={updateCoordinates} />
-        </div>
-        <div className="info-panel">
+        {/* Floating Weather Card */}
+        <div className="floating-weather">
           <WeatherCard weather={weather} />
         </div>
-      </section>
 
-      <section className="favourites">
-        <h3>Favourites</h3>
-        {user?.favourites?.map(f => (
-        <button
-          key={`${f.lat}-${f.lon}`}
-          onClick={() => updateCoordinates({ lat: f.lat, lon: f.lon }, f.locationName)}
-          className="fav-location"
-        >
-        {f.locationName}
-        </button>
-      ))}
-      </section>
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="floating-search">
+          <input
+            value={searchTerm}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchTerm(value);
 
+              clearTimeout(typingTimer);
+              typingTimer = setTimeout(() => fetchSuggestions(value), 250);
+            }}
+            placeholder="Search for a place..."
+          />
+          <button type="submit" disabled={searching}>
+            {searching ? "..." : "Search"}
+          </button>
+        </form>
+
+        {/* Autocomplete dropdown */}
+        {suggestions.length > 0 && (
+          <ul className="autocomplete-list">
+            {suggestions.map((item) => (
+              <li
+                key={item.id}
+                className="autocomplete-item"
+                onClick={() => {
+                  const [lon, lat] = item.center;
+                  const placeName = item.place_name;
+
+                  updateCoordinates({ lat, lon }, placeName);
+                  addRecentSearch({ lat, lon, locationName: placeName });
+
+                  setSearchTerm(placeName);
+                  setSuggestions([]);
+                }}
+              >
+                {item.place_name}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {(mapError || weather.error) && (
+          <ErrorBanner message={mapError || weather.error} />
+        )}
+      </div>
     </div>
   );
 };
 
 export default Dashboard;
+
+
